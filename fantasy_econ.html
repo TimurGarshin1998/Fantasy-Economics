@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Fantasy Econ — события, сезоны и контракты</title>
+
+<link rel="stylesheet" href="css/style.css">
+
+<script src="js/state.js"></script>
+<script src="js/presets.js"></script>
+<script src="js/calc.js"></script>
+<script src="js/exchange.js"></script>
+<script src="js/items.js"></script>
+<script src="js/contracts.js"></script>
+<script src="js/chart.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/ui.js"></script>
+
+</head>
+<body>
+<div class="wrap">
+  <h1>Fantasy Econ — мировые события, сезоны и контракты</h1>
+
+  <div class="card toolbar">
+
+    <label class="pill" onclick="downloadConfig()">Сохранить JSON</label>
+    <label class="pill" for="fileInput">Загрузить JSON</label>
+    <input id="fileInput" type="file" accept="application/json" class="file"/>
+    <label class="pill" onclick="saveLocal()">Сохранить локально</label>
+    <label class="pill" onclick="loadLocal()">Загрузить локально</label>
+    <label class="pill" onclick="resetAll()">Сброс</button>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Ресурсы</h2>
+      <div class="row"><span class="name">Ресурс</span><span>Цена(зм)</span><span>Эластичность</span><span>Вкл</span></div>
+      <div id="baseInputs"></div>
+      <label>Добавить ресурс</label>
+      <div class="mini-grid">
+        <input id="newName" type="text" placeholder="название (напр., шерсть)"/>
+        <input id="newPrice" type="number" step="0.001" value="1" title="Базовая цена"/>
+        <input id="newElas"  type="number" step="0.05"  value="0.8" title="Эластичность"/>
+        <label class="pill" onclick="addResource()">Добавить</label>
+      </div>
+    </div>
+    
+    <div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <h2 style="margin:0">Шоки спроса / предложения</h2>
+    <button class="pill id="toggleShocksBtn" onclick="toggleShocks()">Свернуть</button>
+  </div>
+  <div id="shocksBody" style="margin-top:8px">
+    <div id="shockInputs"></div>
+  </div>
+</div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Наценки (доли)</h2>
+      <div class="mini-grid">
+        <div><label>Транспорт</label><input id="mk_transport" type="number" step="0.01" value="0.10" /></div>
+        <div><label>Хранение</label><input id="mk_storage"  type="number" step="0.01" value="0.05" /></div>
+        <div><label>Риск</label><input id="mk_risk"      type="number" step="0.01" value="0.00" /></div>
+        <div><label>Прибыль</label><input id="mk_profit"   type="number" step="0.01" value="0.10" /></div>
+      </div>
+      <small>Итоговая наценка = 1 + транспорт + хранение + риск + прибыль.</small>
+    </div>
+    <div class="card">
+      <h2>Мировые события</h2>
+      <div id="worldPresets"></div>
+      <small>
+        <br> Активируй несколько — эффекты суммируются и добавляются к ручным шокам.
+        <br> Некоторые из них взаимоисключающие 
+
+      </small>
+    </div>
+    
+  </div>
+  <div class="card">
+    <h2>Сезоны</h2>
+    <div id="seasonPresets"></div>
+  </div>
+
+<div class="card">
+  <h2>Товары</h2>
+  <div id="itemsControls">
+    <input id="itemsSearch" type = "text" placeholder="Поиск по названию..." oninput="onItemsSearchChange()"/>
+    <select id="itemsTypeFilter" onchange="onItemsFilterChange()">
+      <option value="all">Все типы</option>
+      <option value="onlyResources">Только ресурсы</option>
+      <option value="onlyComposite">Только составные</option>
+      <optgroup label="По ресурсу в типе" id="itemsResFilterGroup"></optgroup>
+    </select>
+    <select id="itemsSort" onchange="onItemsSortChange()">
+      <option value="priceAsc">Цена ↑</option>
+      <option value="priceDesc" selected>Цена ↓</option>
+      <option value="nameAsc">Название A→Я</option>
+      <option value="nameDesc">Название Я→A</option>
+    </select>
+    <button class="pill" onclick="resetItemsFilters()">Сбросить</button>
+  </div>
+
+  <!-- Прокручиваемый фрейм -->
+  <div id="itemsFrame">
+    <table id="itemsTbl" style="width:100%">
+      <thead>
+        <tr>
+          <th style="width:56px">ID</th>
+          <th>Название</th>
+          <th>Тип (ресурсы)</th>
+          <th style="width:72px">Unit</th>
+          <th style="width:110px">База</th>
+          <th>Состав</th>
+          <th style="width:130px">Текущая цена</th>
+          <th style="width:110px"></th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  
+  <!-- Modal: редактор состава конкретного товара -->
+<div id="cmpModalBackdrop" class="modal-backdrop"></div>
+<div id="cmpModal" class="modal">
+  <h3 id="cmpModalTitle">Состав товара</h3>
+  <div id="cmpEditList"></div>
+  <div class="row">
+    <select id="cmpEditSelect"></select>
+    <input id="cmpEditQty" type="number" step="0.1" min="0.1" value="1"/>
+    <button class="pill" onclick="cmpAddRow()">+ добавить</button>
+  </div>
+  <div class="actions">
+    <button class="pill" onclick="cmpClose()">Отмена</button>
+    <button class="pill" onclick="cmpSave()">Сохранить</button>
+  </div>
+</div>
+
+  <h3>Добавить товар</h3>
+  <div class="mini-grid-5" style="grid-template-columns: repeat(5,1fr); gap:8px">
+    <input id="itmName" type="text" placeholder="Название"/>
+    <select id="itmType"></select>
+    <input id="itmUnit" type="text" placeholder="Unit (кг/шт)"/>
+    <input id="itmBase" type="number" step="0.01" placeholder="Базовая цена"/>
+    <label class="pill" onclick="addItem()">Добавить</button>
+  </div>
+
+  <small>Состав (compound) можно будет редактировать через кнопку «⚙» в таблице.</small>
+</div>
+<div class="card" id="exchangeCard">
+  <h2>Биржа товаров</h2>
+
+  <div class="row">
+    <select id="exItem"></select>
+    <div>
+      <label>Мин–Макс (шт\кг)</label>
+      <div style="display:flex;gap:6px">
+        <input id="exMin" type="number" step="1" value="1000">
+        <input id="exMax" type="number" step="1" value="5000">
+      </div>
+    </div>
+    <div>
+      <label>Запас (т)</label>
+      <input id="exStock" type="number" step="1" value="3000">
+    </div>
+    <div>
+      <label>Спред %</label>
+      <input id="exSpread" type="number" step="0.1" value="2.0">
+    </div>
+    <div>
+      <label>Чувствительность α</label>
+      <input id="exAlpha" type="number" step="0.05" value="0.6">
+    </div>
+  </div>
+
+  <div id="exchangeQuote">
+    <div class="q"><div>Bid</div><div id="exBid">—</div></div>
+    <div class="q"><div>Mid</div><div id="exMid">—</div></div>
+    <div class="q"><div>Ask</div><div id="exAsk">—</div></div>
+  </div>
+
+  <div class="row" style="grid-template-columns:1.6fr 1fr 1fr auto auto">
+    <div>
+      <label>Запас</label>
+      <div class="bar"><span id="exBar" style="width:50%"></span></div>
+    </div>
+    <div>
+      <label>Кол-во (шт\кг)</label>
+      <input id="exQty" type="number" step="1" value="100">
+    </div>
+    <button class="pill" onclick="exchangeSell()">Продать в рынок</button>
+    <button class="pill" onclick="exchangeBuy()">Купить с рынка</button>
+    <button class="pill" onclick="exchangeSave()">Сохранить настройки</button>
+  </div>
+
+  <div id="exchangeLog"></div>
+</div>
+ <div class="card">
+  <h2>Контракты (форварды / опционы)</h2>
+  <div class="inline-style" style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px">
+    <div>
+      <label>Ресурс</label>
+      <select id="cRes"></select>
+    </div>
+    <div>
+      <label>Кол-во</label>
+      <input id="cQty" type="number" value="10" step="1"/>
+    </div>
+    <div>
+      <label>Strike (цена)</label>
+      <input id="cPrice" type="number" value="1" step="0.01"/>
+    </div>
+    <div>
+      <label>Премия</label>
+      <input id="cPrem" type="number" value="0" step="0.01"/>
+    </div>
+    <div>
+      <label>Тип</label>
+      <select id="cType">
+        <option value="forward">Forward</option>
+        <option value="call">Call</option>
+        <option value="put">Put</option>
+      </select>
+    </div>
+    <div>
+      <label>Сторона</label>
+      <select id="cSide">
+        <option value="buy">Buy (long)</option>
+        <option value="sell">Sell (short)</option>
+      </select>
+    </div>
+    <div>
+      <label>Срок (ярлык)</label>
+      <input id="cTerm" type="text" value="осень"/>
+    </div>
+  </div>
+
+  <div style="margin-top:10px">
+    <label class="pill" onclick="addContract()">Добавить контракт</label>
+  </div>
+
+  <table id="contractTbl" style="margin-top:10px">
+    <thead>
+      <tr>
+        <th>Ресурс</th>
+        <th>Тип</th>
+        <th>Сторона</th>
+        <th>Кол-во</th>
+        <th>Strike</th>
+        <th>Премия</th>
+        <th>Рыночная</th>
+        <th>P/L</th>
+        <th>Статус</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <small>
+   <br>  P/L: 
+    <br>  Forward long = (S−K)×Q;
+    <br>  Forward short = −(S−K)×Q;  
+    <br>  Call/Put учитывают премию: 
+    <br>  CallBuy = max(0,S−K)×Q − Премия×Q; 
+    <br>  CallSell = −max(0,S−K)×Q + Премия×Q;  
+    <br>  PutBuy = max(0,K−S)×Q − Премия×Q; 
+    <br>  PutSell = −max(0,K−S)×Q + Премия×Q.
+  </small>
+</div>
+  <div class="grid">
+    <div class="card">
+      <h2>Результаты</h2>
+      <table id="resultTbl"><thead><tr><th>Ресурс</th><th>Цена</th><th>Спрос</th><th>Предложение</th></tr></thead><tbody></tbody></table>
+    </div>
+    <div class="card">
+      <h2>График цен (зум: колесо, панорамирование: перетаскивание, двойной клик — сброс)</h2>
+      <canvas id="chart" width="1000" height="360"></canvas>
+    </div>
+  </div>
+</div>
+</body>
+</html>

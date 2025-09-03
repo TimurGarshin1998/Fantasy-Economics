@@ -1,0 +1,112 @@
+:root { --bg:#0b0f14; --fg:#e6e6e6; --muted:#9aa4ad; --card:#121821; --accent:#7bd389; --danger:#ff9b9b; }
+
+html,body{
+  background:var(--bg);
+  color:var(--fg);
+  font-family:system-ui,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;
+  margin:0;
+  padding:0;
+}
+
+.wrap{max-width:1280px;margin:0 auto;padding:16px 20px 80px;}
+h1{font-size:22px;margin:8px 0 16px}
+h2{font-size:18px;margin:22px 0 12px;color:var(--accent)}
+
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+
+.card{background:var(--card);border-radius:14px;padding:14px;border:1px solid #1f2834;}
+
+label{display:block;font-size:12px;color:var(--muted);margin:6px 0}
+
+input,select,button{font-size:13px}
+
+input[type=number],input[type=text],select{
+  width:100%;
+  padding:8px;
+  border-radius:8px;
+  border:1px solid #253044;
+  background:#0e141c;
+  color:var(--fg)
+}
+
+input[type=range]{width:100%}
+
+.row{display:grid;grid-template-columns:1.1fr 1fr 1fr 0.8fr;gap:8px;align-items:center;margin:4px 0}
+.row .name{color:#dfe7ee}
+
+.pill{
+  display:inline-block;
+  padding:6px 10px;
+  background:#14202b;
+  border:1px solid #253044;
+  border-radius:999px;
+  color:#b9c3cc;
+  font-size:12px;
+  margin:4px;
+  cursor:pointer;
+  user-select:none
+}
+.pill.active{background:#1e2a37;border-color:#4e6b8f;color:#e9f0f6}
+
+.collapsible .collapsible-body { display:block; }
+.collapsible.collapsed .collapsible-body { display:none; }
+
+table{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px}
+th,td{border-bottom:1px solid #223046;padding:6px;text-align:right}
+th:first-child,td:first-child{text-align:left}
+
+.muted{color:var(--muted)}
+
+canvas{
+  width:100%;
+  height:320px;
+  background:#0e141c;
+  border:1px solid #223046;
+  border-radius:12px;
+  touch-action:none
+}
+
+#shockInputs.collapsed .shock-row:nth-child(n+3){ display:none; }
+
+.tog{display:flex;align-items:center;gap:8px}
+.del{color:var(--danger);cursor:pointer}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+.file{display:none}
+.mini-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.mini-grid-5{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+small{color:#9aa4ad}
+
+/* ===== Биржа ===== */
+#exchangeCard .row{display:grid;grid-template-columns:1.6fr 0.9fr 0.9fr auto auto;gap:8px;align-items:end}
+#exchangeCard .bar{height:8px;background:#1b2536;border-radius:6px;overflow:hidden}
+#exchangeCard .bar>span{display:block;height:100%;background:#7bd389}
+#exchangeQuote{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0}
+#exchangeQuote .q{background:#121a27;border:1px solid #2a3648;border-radius:10px;padding:8px;text-align:center}
+#exchangeLog{max-height:140px;overflow:auto;border:1px solid #2a3648;border-radius:10px;padding:6px;font-size:12px}
+
+/* ===== Modal (редактор состава) ===== */
+.modal-backdrop{
+  position:fixed; inset:0; background:rgba(0,0,0,0.45); display:none; z-index:90;
+}
+.modal{
+  position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+  background:#121821; border:1px solid #2a3648; border-radius:12px;
+  padding:14px; width:min(640px,92vw); display:none; z-index:91;
+}
+.modal h3{ margin:0 0 10px; color:#7bd389; }
+.modal .row{ display:grid; grid-template-columns:2fr 0.7fr 0.4fr; gap:8px; align-items:center; margin:6px 0;}
+.modal .actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:10px;}
+
+/* ===== Товары: скролл-рамка и панель управления ===== */
+#itemsFrame{
+  max-height: 360px;        /* подстрой по вкусу */
+  overflow: auto;
+  border: 1px solid #2a3648;
+  border-radius: 10px;
+}
+#itemsControls{
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr auto;
+  gap: 8px;
+  margin: 8px 0;
+}
