@@ -109,7 +109,7 @@ function exchangeBuy() {
 
   market[id].stock = _clamp(_nz(market[id].stock, 0) - qty, market[id].min, market[id].max);
 
-  logExchange(`КУПИТЬ ${qty}т ${it.name} @ ~${(price * (1 + spr / 2)).toFixed(3)} (= ${pay.toFixed(3)})`);
+  logExchange(`КУПИТЬ ${qty}ед ${it.name} @ ~${(price * (1 + spr / 2)).toFixed(3)} (= ${pay.toFixed(3)})`);
   exchangeRefreshQuote();
   renderItems(lastPriceMap || {});
 }
@@ -125,7 +125,7 @@ function exchangeSell() {
 
   market[id].stock = _clamp(_nz(market[id].stock, 0) + qty, market[id].min, market[id].max);
 
-  logExchange(`ПРОДАТЬ ${qty}т ${it.name} @ ~${(price * (1 - spr / 2)).toFixed(3)} (= ${get.toFixed(3)})`);
+  logExchange(`ПРОДАТЬ ${qty}ед ${it.name} @ ~${(price * (1 - spr / 2)).toFixed(3)} (= ${get.toFixed(3)})`);
   exchangeRefreshQuote();
   renderItems(lastPriceMap || {});
 }

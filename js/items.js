@@ -8,26 +8,77 @@ function computeBaseFromTypes(types) {
 }
 
 /** Рекурсивная стоимость товара по модели (без биржевой премии) */
-function computeItemCurrentPrice(item, priceMap, visited = new Set()) {
-  if (!item) return NaN;
+// function computeItemCurrentPrice(item, priceMap, visited = new Set()) {
+//   if (!item) return NaN;
+//   if (visited.has(item.id)) return NaN;
+//   visited.add(item.id);
+
+//   // базовая часть = сумма цен ресурсов из type
+//   let total = computeBaseFromTypes(item.type);
+
+//   // составные части
+//   if (item.compound && item.compound.length) {
+//     for (const c of item.compound) {
+//       const sub = items.find(x => x.id === c.itemId);
+//       if (!sub) continue;
+//       const subPrice = computeItemCurrentPrice(sub, priceMap, visited);
+//       if (Number.isFinite(subPrice)) total += c.qty * subPrice;
+//     }
+//   }
+//   visited.delete(item.id);
+//   return total;
+// }
+
+function computeItemCurrentPrice(item, priceMap, visited=new Set()){
   if (visited.has(item.id)) return NaN;
   visited.add(item.id);
 
-  // базовая часть = сумма цен ресурсов из type
-  let total = computeBaseFromTypes(item.type);
+  let total = computeBaseFromTypes(item.type, priceMap);
 
-  // составные части
-  if (item.compound && item.compound.length) {
-    for (const c of item.compound) {
-      const sub = items.find(x => x.id === c.itemId);
+  if (item.compound && item.compound.length){
+    for (const c of item.compound){
+      const sub = items.find(x=>x.id===c.itemId);
       if (!sub) continue;
       const subPrice = computeItemCurrentPrice(sub, priceMap, visited);
       if (Number.isFinite(subPrice)) total += c.qty * subPrice;
     }
   }
   visited.delete(item.id);
-  return total;
+
+  // === МАГИЧНОСТЬ: множитель (по умолчанию 1.0)
+  const k = Number.isFinite(+item.magicCoef) && +item.magicCoef > 0 ? +item.magicCoef : 1.0;
+  return total * k;
 }
+
+
+/* ==== Минимальная цена по типу и "пол" для товара ==== */
+/* Глобальная карта "тип -> минимальная цена". 
+   Если уже задана в state.js, это не перезапишет её. */
+window.TYPE_MIN_PRICE = window.TYPE_MIN_PRICE || {
+  "ремесленные материалы": 0.01  // 1 медная монета
+};
+
+/** Применить "пол" по типам товара.
+ *  price: число (модельная цена до биржевых премий).
+ *  Возвращает max(price, max(минимумы по всем типам товара)).
+ */
+function applyTypeFloor(item, price){
+  let p = Number(price) || 0;
+  if (!item) return p;
+
+  const types = Array.isArray(item.type)
+    ? item.type
+    : (item.type ? [item.type] : []);
+
+  let floor = 0;
+  for (const t of types){
+    const f = Number(window.TYPE_MIN_PRICE?.[t]);
+    if (Number.isFinite(f)) floor = Math.max(floor, f);
+  }
+  return Math.max(p, floor);
+}
+window.applyTypeFloor = applyTypeFloor; // на всякий случай в глобал
+
 
 /** Получить «рыночную» цену (модель × биржевая премия); есть fallback, если биржа не подключена */
 function getItemDisplayPrice(item, priceMap) {
@@ -36,6 +87,23 @@ function getItemDisplayPrice(item, priceMap) {
   }
   return computeItemCurrentPrice(item, priceMap);
 }
+
+// function getMarketAdjustedPrice(item, priceMap){
+//   const base = computeItemCurrentPrice(item, priceMap); // уже умножено на magicCoef
+//   const floored = applyTypeFloor(item, base);           // минимум по типу
+//   const prem = computeMarketPremium(item.id);           // биржевая надбавка
+//   return floored * (1 + prem);
+// }
+
+function getMarketAdjustedPrice(item, priceMap){
+  const base = computeItemCurrentPrice(item, priceMap); // уже с magicCoef внутри
+  const floored = applyTypeFloor(item, base);           // ← вот здесь используем "пол"
+  const prem = (typeof computeMarketPremium === 'function')
+    ? (computeMarketPremium(item.id) || 0)
+    : 0;
+  return floored * (1 + prem);
+}
+
 
 /** Мультиселект ресурсов (тип товара) берётся из lastPriceMap */
 function populateTypeOptions() {
@@ -64,33 +132,66 @@ function getSelectedResources() {
 }
 
 /** Добавить товар */
-function addItem() {
-  const name = (document.getElementById('itmName')?.value || '').trim();
+// function addItem() {
+//   const name = (document.getElementById('itmName')?.value || '').trim();
+//   if (!name) return alert('Введите название');
+
+//   const types = getSelectedResources();
+//   if (!types.length) return alert('Выберите хотя бы один ресурс в «Тип (ресурсы из результатов)»');
+
+//   const unit = (document.getElementById('itmUnit')?.value || '').trim();
+//   const id = items.length ? Math.max(...items.map(x => +x.id || 0)) + 1 : 1;
+
+//   items.push({
+//     id,
+//     name,
+//     type: types,    // список ресурсов
+//     unit,
+//     compound: []    // редактируется через «⚙»
+//   });
+
+//   // очистка формы
+//   document.getElementById('itmName').value = '';
+//   document.getElementById('itmUnit').value = '';
+//   const baseField = document.getElementById('itmBase');
+//   if (baseField) baseField.value = '';
+
+//   populateCompoundCandidates();
+//   renderItems(lastPriceMap || {});
+// }
+
+function addItem(){
+  const name = (document.getElementById('itmName').value || '').trim();
   if (!name) return alert('Введите название');
 
   const types = getSelectedResources();
-  if (!types.length) return alert('Выберите хотя бы один ресурс в «Тип (ресурсы из результатов)»');
+  if (!types.length) return alert('Выберите хотя бы один ресурс');
 
-  const unit = (document.getElementById('itmUnit')?.value || '').trim();
-  const id = items.length ? Math.max(...items.map(x => +x.id || 0)) + 1 : 1;
+  const unit  = (document.getElementById('itmUnit').value || '').trim();
+  const k     = parseFloat(document.getElementById('itmMagic').value);
+  const magic = (Number.isFinite(k) && k > 0) ? k : 1.0;
+
+  const id = items.length ? Math.max(...items.map(x=>x.id)) + 1 : 1;
 
   items.push({
     id,
     name,
-    type: types,    // список ресурсов
+    type: types,
     unit,
-    compound: []    // редактируется через «⚙»
+    compound: [],
+    magicCoef: magic
   });
 
   // очистка формы
   document.getElementById('itmName').value = '';
   document.getElementById('itmUnit').value = '';
-  const baseField = document.getElementById('itmBase');
-  if (baseField) baseField.value = '';
+  document.getElementById('itmMagic').value = '';
+  document.getElementById('itmBase').value = '';
 
-  populateCompoundCandidates();
-  renderItems(lastPriceMap || {});
+  populateCompoundCandidates?.();
+  renderItems?.(lastPriceMap || {});
 }
+
 
 /** Удалить товар (и ссылки на него из составов других товаров) */
 function removeItem(id) {
@@ -101,6 +202,34 @@ function removeItem(id) {
   populateCompoundCandidates();
   renderItems(lastPriceMap || {});
 }
+
+// === Цена для отображения в таблице товаров ===
+// Формула: (состав × magicCoef) → пол по типу → биржевая премия (если есть)
+function getItemDisplayPrice(item, priceMap){
+  if (!item) return NaN;
+
+  // 1) базовая модель: рекурсивно считаем состав
+  const base = computeItemCurrentPrice(item, priceMap); // внутри уже умножено на magicCoef (если ты добавил это туда)
+
+  // если в твоей версии computeItemCurrentPrice НЕ умножает на magicCoef — раскомментируй:
+  // const k = Number.isFinite(+item.magicCoef) && +item.magicCoef > 0 ? +item.magicCoef : 1.0;
+  // const withMagic = base * k;
+  const withMagic = base;
+
+  // 2) "пол" по типу (Type floor)
+  const floored = (typeof applyTypeFloor === 'function') ? applyTypeFloor(item, withMagic) : withMagic;
+
+  // 3) рыночная премия (биржа), если модуль биржи подключён
+  let prem = 0;
+  try {
+    if (typeof computeMarketPremium === 'function' && item.id != null) {
+      prem = computeMarketPremium(item.id) || 0; // вернёт и сохранит market[itemId].premium
+    }
+  } catch(e){ /* молча, чтобы не рвать UI */ }
+
+  return floored * (1 + prem);
+}
+
 
 /** Таблица «Товары»: поиск/фильтр/сорт + цены */
 function renderItems(priceMap) {
@@ -132,14 +261,19 @@ function renderItems(priceMap) {
   });
 
   // сортировка
+
+  // if (itemsSort === 'idAsc' || itemsSort === 'idDesc') {
+  //   const s = (a.id || 0) - (b.id || 0);
+  //   return itemsSort === 'idAsc' ? s : -s;
+
 filtered.sort((a, b) => {
-  if (itemsSort === 'nameAsc' || itemsSort === 'nameDesc') {
-    const s = (a.name || '').localeCompare(b.name || '', 'ru');
-    return itemsSort === 'nameAsc' ? s : -s;
-  } 
-  else if (itemsSort === 'idAsc' || itemsSort === 'idDesc') {
+  if (itemsSort === 'idAsc' || itemsSort === 'idDesc') {
     const s = (a.id || 0) - (b.id || 0);
     return itemsSort === 'idAsc' ? s : -s;
+  } 
+  else if (itemsSort === 'nameAsc' || itemsSort === 'nameDesc') {
+    const s = (a.name || '').localeCompare(b.name || '', 'ru');
+    return itemsSort === 'nameAsc' ? s : -s;
   } 
   else {
     const pa = getItemDisplayPrice(a, priceMap);
@@ -350,9 +484,9 @@ function onItemsSortChange() {
 function resetItemsFilters() {
   itemsSearchTerm = '';
   itemsTypeFilter = 'all';
-  itemsSort = 'priceDesc';
+  itemsSort = "idAsc";//'priceDesc';
   document.getElementById('itemsSearch').value = '';
   document.getElementById('itemsTypeFilter').value = 'all';
-  document.getElementById('itemsSort').value = 'priceDesc';
+  document.getElementById('itemsSort').value = 'idAsc';
   renderItems(lastPriceMap || {});
 }
