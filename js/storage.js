@@ -61,21 +61,153 @@ function downloadConfig() {
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 
-/** Загрузка из файла input[type=file]#fileInput (добавь в HTML) */
+// === B) Надёжный импорт товаров/рецептов ===
+function importItemsJson(obj){
+  try{
+    // 0) нормализация входа
+    let rawArr = null;
+    if (Array.isArray(obj)) rawArr = obj;
+    else if (obj && Array.isArray(obj.items)) rawArr = obj.items;
+    else if (obj && Array.isArray(obj.recipes)) rawArr = obj.recipes;
+    else if (obj && Array.isArray(obj.data)) rawArr = obj.data;
+
+    if (!rawArr || !rawArr.length){
+      alert('JSON не содержит списка товаров (ожидались массив или items[]/recipes[]/data[]).');
+      return;
+    }
+
+    if (!Array.isArray(window.items)) window.items = [];
+
+    // индексы существующих
+    const byName = new Map(items.map(it => [String(it.name).trim().toLowerCase(), it]));
+    const byId   = new Map(items.map(it => [+it.id, it]));
+
+    // фаза объявления (создание/обновление шапок)
+    let nextId = items.length ? Math.max(...items.map(x => +x.id || 0)) + 1 : 1;
+    const created = []; const updated = [];
+
+    const normType = (v) => Array.isArray(v) ? v.map(String) : (v ? [String(v)] : []);
+
+    rawArr.forEach(src => {
+      const name = String(src.name || '').trim();
+      if (!name) return;
+
+      const key = name.toLowerCase();
+      let it = byName.get(key);
+
+      if (!it) {
+        const idToUse = (Number.isFinite(+src.id) && !byId.has(+src.id)) ? +src.id : nextId++;
+        it = {
+          id: idToUse,
+          name,
+          type: normType(src.type),
+          unit: src.unit || '',
+          compound: [],
+          isResource: !!src.isResource
+        };
+        items.push(it);
+        byName.set(key, it);
+        byId.set(it.id, it);
+        created.push(name);
+      } else {
+        if (src.type != null) it.type = normType(src.type);
+        if (src.unit != null) it.unit = src.unit;
+        updated.push(name);
+      }
+    });
+
+    // фаза связки состава
+    function resolveItemId(ref){
+      if (ref == null) return null;
+      if (typeof ref === 'number' && byId.has(+ref)) return +ref;
+      if (typeof ref === 'string') {
+        const trg = byName.get(ref.trim().toLowerCase());
+        return trg ? +trg.id : null;
+      }
+      return null;
+    }
+
+    rawArr.forEach(src => {
+      const name = String(src.name || '').trim();
+      if (!name) return;
+      const it = byName.get(name.toLowerCase());
+      if (!it) return;
+
+      const comp = Array.isArray(src.compound) ? src.compound : [];
+      const newCompound = comp.map(c => {
+        const ref = (c.itemId != null) ? c.itemId
+                  : (c.item   != null) ? c.item
+                  : (c.ref    != null) ? c.ref
+                  : null;
+        const id = resolveItemId(ref);
+        const qty = Math.max(0.0001, +c.qty || 0);
+        if (!id) {
+          console.warn(`[importItemsJson] Не найден компонент "${ref}" для "${name}"`);
+          return null;
+        }
+        return { itemId: id, qty };
+      }).filter(Boolean);
+
+      if (comp.length) it.compound = newCompound;
+    });
+
+    // UI обновления
+    populateCompoundCandidates?.();
+    populateTypeOptions?.();
+    populateItemsResFilterOptions?.();
+
+    recalc?.();
+    renderItems?.(lastPriceMap || {});
+
+    alert(`Импорт завершён: добавлено ${created.length}, обновлено ${updated.length}.`);
+    console.log('[importItemsJson] Добавлены:', created);
+    console.log('[importItemsJson] Обновлены:', updated);
+  } catch(e){
+    console.error('importItemsJson error:', e);
+    alert('Ошибка импорта товаров: ' + e.message);
+  }
+}
+
+// на всякий случай в глобал:
+window.importItemsJson = importItemsJson;
+
 (function bindFileInput(){
   const el = document.getElementById('fileInput');
-  if (!el) return;
+  if (!el) {
+    console.warn('[storage] #fileInput не найден, импорт из файла недоступен.');
+    return;
+  }
   el.addEventListener('change', (e) => {
     const f = e.target.files[0]; if (!f) return;
     const r = new FileReader();
-    r.onload = () => { 
-      try { setConfig(JSON.parse(r.result)); } 
-      catch (err) { alert('Неверный JSON: ' + err.message); } 
+    r.onload = () => {
+      try {
+        const obj = JSON.parse(r.result);
+        console.log('[storage] JSON загружен:', obj);
+
+        // Полный конфиг?
+        const looksLikeFullConfig = obj && (
+          obj.resources || obj.items || obj.contracts ||
+          obj.markups || obj.activeWorld || obj.activeSeasons || obj.market
+        );
+
+        if (looksLikeFullConfig) {
+          console.log('[storage] Определён как ПОЛНЫЙ КОНФИГ → setConfig()');
+          setConfig(obj);
+        } else {
+          console.log('[storage] Определён как ПРЕСЕТ ТОВАРОВ → importItemsJson()');
+          importItemsJson(obj);
+        }
+      } catch(err){
+        console.error('[storage] Неверный JSON:', err);
+        alert('Неверный JSON: ' + err.message);
+      }
     };
-    r.readAsText(f, 'utf-8'); 
+    r.readAsText(f, 'utf-8');
     e.target.value = '';
   });
 })();
+
 
 /** LocalStorage */
 function saveLocal() {

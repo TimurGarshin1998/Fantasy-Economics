@@ -132,18 +132,24 @@ function renderItems(priceMap) {
   });
 
   // сортировка
-  filtered.sort((a, b) => {
-    if (itemsSort === 'nameAsc' || itemsSort === 'nameDesc') {
-      const s = (a.name || '').localeCompare(b.name || '', 'ru');
-      return itemsSort === 'nameAsc' ? s : -s;
-    } else {
-      const pa = getItemDisplayPrice(a, priceMap);
-      const pb = getItemDisplayPrice(b, priceMap);
-      const sa = Number.isFinite(pa) ? pa : -Infinity;
-      const sb = Number.isFinite(pb) ? pb : -Infinity;
-      return itemsSort === 'priceAsc' ? (sa - sb) : (sb - sa);
-    }
-  });
+filtered.sort((a, b) => {
+  if (itemsSort === 'nameAsc' || itemsSort === 'nameDesc') {
+    const s = (a.name || '').localeCompare(b.name || '', 'ru');
+    return itemsSort === 'nameAsc' ? s : -s;
+  } 
+  else if (itemsSort === 'idAsc' || itemsSort === 'idDesc') {
+    const s = (a.id || 0) - (b.id || 0);
+    return itemsSort === 'idAsc' ? s : -s;
+  } 
+  else {
+    const pa = getItemDisplayPrice(a, priceMap);
+    const pb = getItemDisplayPrice(b, priceMap);
+    const sa = Number.isFinite(pa) ? pa : -Infinity;
+    const sb = Number.isFinite(pb) ? pb : -Infinity;
+    return itemsSort === 'priceAsc' ? (sa - sb) : (sb - sa);
+  }
+});
+
 
   // рендер
   filtered.forEach(it => {
@@ -164,6 +170,7 @@ function renderItems(priceMap) {
          <span class="del" title="Удалить" onclick="removeItem(${it.id})">×</span>`;
 
     const tr = document.createElement('tr');
+
     tr.innerHTML = `
       <td>${it.id}</td>
       <td>${it.name}</td>

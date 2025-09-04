@@ -6,7 +6,7 @@
 <title>Fantasy Econ — события, сезоны и контракты</title>
 
 <link rel="stylesheet" href="css/style.css">
-
+<input type="file" id="fileInput" accept=".json">
 <script src="js/state.js"></script>
 <script src="js/presets.js"></script>
 <script src="js/calc.js"></script>
@@ -95,6 +95,8 @@
       <optgroup label="По ресурсу в типе" id="itemsResFilterGroup"></optgroup>
     </select>
     <select id="itemsSort" onchange="onItemsSortChange()">
+      <option value="idAsc">ID ↑</option>
+      <option value="idDesc">ID ↓</option>
       <option value="priceAsc">Цена ↑</option>
       <option value="priceDesc" selected>Цена ↓</option>
       <option value="nameAsc">Название A→Я</option>
