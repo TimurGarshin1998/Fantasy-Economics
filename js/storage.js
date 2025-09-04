@@ -207,11 +207,51 @@ function importItemsJson(obj){
 //     e.target.value = '';
 //   });
 // })();
-window.addEventListener('DOMContentLoaded', () => {
-  const el = document.getElementById('fileInput');
-  if (!el) return console.warn('[storage] #fileInput не найден');
+// window.addEventListener('DOMContentLoaded', () => {
+//   // const el = document.getElementById('fileInput');
+//   // if (!el) return console.warn('[storage] #fileInput не найден');
+//   // Кнопка → открыть диалог выбора файла
+//   const btn = document.getElementById('btnLoadJson');
+//   const fi  = document.getElementById('fileInput');
+//   if (btn && fi) btn.addEventListener('click', () => fi.click());
 
-  el.addEventListener('change', (e) => {
+
+//   fi?.addEventListener('change', (e) => {
+//     const f = e.target.files?.[0];
+//     if (!f) return;
+//     const r = new FileReader();
+//     r.onload = () => {
+//       try {
+//         const obj = JSON.parse(r.result);
+
+//         const looksLikeFullConfig = obj && (
+//           obj.resources || obj.items || obj.contracts ||
+//           obj.markups || obj.activeWorld || obj.activeSeasons || obj.market
+//         );
+
+//         if (looksLikeFullConfig) {
+//           setConfig(obj);
+//         } else {
+//           importItemsJson(obj);   // пресет товаров/рецептов
+//         }
+//       } catch (err) {
+//         alert('Неверный JSON: ' + err.message);
+//       } finally {
+//         // важно: позволяет снова выбрать тот же файл
+//         e.target.value = '';
+//       }
+//     };
+//     r.readAsText(f, 'utf-8');
+//   });
+// });
+ window.addEventListener('DOMContentLoaded', () => {
+  // Кнопка → открыть диалог выбора файла
+  const btn = document.getElementById('btnLoadJson');
+  const fi  = document.getElementById('fileInput');
+  if (btn && fi) btn.addEventListener('click', () => fi.click());
+
+  // Обработчик загрузки (оставь твой, если уже есть)
+  fi?.addEventListener('change', (e) => {
     const f = e.target.files?.[0];
     if (!f) return;
     const r = new FileReader();
@@ -219,26 +259,25 @@ window.addEventListener('DOMContentLoaded', () => {
       try {
         const obj = JSON.parse(r.result);
 
-        const looksLikeFullConfig = obj && (
+        const full = obj && (
           obj.resources || obj.items || obj.contracts ||
           obj.markups || obj.activeWorld || obj.activeSeasons || obj.market
         );
-
-        if (looksLikeFullConfig) {
+        if (full) {
           setConfig(obj);
         } else {
-          importItemsJson(obj);   // пресет товаров/рецептов
+          importItemsJson(obj); // пресет товаров/рецептов
         }
-      } catch (err) {
+      } catch(err){
         alert('Неверный JSON: ' + err.message);
       } finally {
-        // важно: позволяет снова выбрать тот же файл
-        e.target.value = '';
+        e.target.value = ''; // позволяет выбрать тот же файл снова
       }
     };
     r.readAsText(f, 'utf-8');
   });
 });
+
 
 
 /** LocalStorage */

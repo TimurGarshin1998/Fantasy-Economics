@@ -26,10 +26,8 @@
   <div class="card toolbar">
 
     <label class="pill" onclick="downloadConfig()">Сохранить JSON</label>
-    <label class="pill file-btn">
-      Загрузить JSON
-      <input id="fileInput" type="file" accept=".json,application/json">
-    </label>
+    <button class="pill" id="btnLoadJson">Загрузить JSON</button>
+    <input id="fileInput" type="file" accept=".json,application/json" style="display:none">
     <!-- <label class="pill" for="fileInput">Загрузить JSON</label>
     <input id="fileInput" type="file" accept="application/json" class="file"/> -->
     <!-- <input class="pill" type="file" id="fileInput" accept=".json"> -->
