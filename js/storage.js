@@ -169,44 +169,76 @@ function importItemsJson(obj){
 }
 
 // на всякий случай в глобал:
-window.importItemsJson = importItemsJson;
+// window.importItemsJson = importItemsJson;
 
-(function bindFileInput(){
+// (function bindFileInput(){
+//   const el = document.getElementById('fileInput');
+//   if (!el) {
+//     console.warn('[storage] #fileInput не найден, импорт из файла недоступен.');
+//     return;
+//   }
+//   el.addEventListener('change', (e) => {
+//     const f = e.target.files[0]; if (!f) return;
+//     const r = new FileReader();
+//     r.onload = () => {
+//       try {
+//         const obj = JSON.parse(r.result);
+//         console.log('[storage] JSON загружен:', obj);
+
+//         // Полный конфиг?
+//         const looksLikeFullConfig = obj && (
+//           obj.resources || obj.items || obj.contracts ||
+//           obj.markups || obj.activeWorld || obj.activeSeasons || obj.market
+//         );
+
+//         if (looksLikeFullConfig) {
+//           console.log('[storage] Определён как ПОЛНЫЙ КОНФИГ → setConfig()');
+//           setConfig(obj);
+//         } else {
+//           console.log('[storage] Определён как ПРЕСЕТ ТОВАРОВ → importItemsJson()');
+//           importItemsJson(obj);
+//         }
+//       } catch(err){
+//         console.error('[storage] Неверный JSON:', err);
+//         alert('Неверный JSON: ' + err.message);
+//       }
+//     };
+//     r.readAsText(f, 'utf-8');
+//     e.target.value = '';
+//   });
+// })();
+window.addEventListener('DOMContentLoaded', () => {
   const el = document.getElementById('fileInput');
-  if (!el) {
-    console.warn('[storage] #fileInput не найден, импорт из файла недоступен.');
-    return;
-  }
+  if (!el) return console.warn('[storage] #fileInput не найден');
+
   el.addEventListener('change', (e) => {
-    const f = e.target.files[0]; if (!f) return;
+    const f = e.target.files?.[0];
+    if (!f) return;
     const r = new FileReader();
     r.onload = () => {
       try {
         const obj = JSON.parse(r.result);
-        console.log('[storage] JSON загружен:', obj);
 
-        // Полный конфиг?
         const looksLikeFullConfig = obj && (
           obj.resources || obj.items || obj.contracts ||
           obj.markups || obj.activeWorld || obj.activeSeasons || obj.market
         );
 
         if (looksLikeFullConfig) {
-          console.log('[storage] Определён как ПОЛНЫЙ КОНФИГ → setConfig()');
           setConfig(obj);
         } else {
-          console.log('[storage] Определён как ПРЕСЕТ ТОВАРОВ → importItemsJson()');
-          importItemsJson(obj);
+          importItemsJson(obj);   // пресет товаров/рецептов
         }
-      } catch(err){
-        console.error('[storage] Неверный JSON:', err);
+      } catch (err) {
         alert('Неверный JSON: ' + err.message);
+      } finally {
+        // важно: позволяет снова выбрать тот же файл
+        e.target.value = '';
       }
     };
     r.readAsText(f, 'utf-8');
-    e.target.value = '';
   });
-})();
+});
 
 
 /** LocalStorage */

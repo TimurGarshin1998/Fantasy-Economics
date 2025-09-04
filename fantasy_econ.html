@@ -6,7 +6,8 @@
 <title>Fantasy Econ — события, сезоны и контракты</title>
 
 <link rel="stylesheet" href="css/style.css">
-<input type="file" id="fileInput" accept=".json">
+<!-- <input type="file" id="fileInput" accept=".json"> -->
+
 <script src="js/state.js"></script>
 <script src="js/presets.js"></script>
 <script src="js/calc.js"></script>
@@ -25,8 +26,13 @@
   <div class="card toolbar">
 
     <label class="pill" onclick="downloadConfig()">Сохранить JSON</label>
-    <label class="pill" for="fileInput">Загрузить JSON</label>
-    <input id="fileInput" type="file" accept="application/json" class="file"/>
+    <label class="pill file-btn">
+      Загрузить JSON
+      <input id="fileInput" type="file" accept=".json,application/json">
+    </label>
+    <!-- <label class="pill" for="fileInput">Загрузить JSON</label>
+    <input id="fileInput" type="file" accept="application/json" class="file"/> -->
+    <!-- <input class="pill" type="file" id="fileInput" accept=".json"> -->
     <label class="pill" onclick="saveLocal()">Сохранить локально</label>
     <label class="pill" onclick="loadLocal()">Загрузить локально</label>
     <label class="pill" onclick="resetAll()">Сброс</button>
